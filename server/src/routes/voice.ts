@@ -49,7 +49,7 @@ router.post('/session', requireAuth, async (req, res) => {
 // replace with Redis or another shared store to enforce global limits.
 interface RateEntry { count: number; reset: number }
 const guestRateStore: Map<string, RateEntry> = new Map();
-const GUEST_DAILY_LIMIT = parseInt(process.env.GUEST_TEXT_DAILY_LIMIT || '20', 10);
+const GUEST_DAILY_LIMIT = 2; // Limit unregistered users to 3 messages only
 
 function getRateEntry(key: string): RateEntry {
   const now = Date.now();
@@ -69,7 +69,7 @@ function getRateEntry(key: string): RateEntry {
 // PUBLIC: Allows guests (unauthenticated). Authenticated users may have higher quality (paid key) if subscribed.
 router.post('/text', optionalAuth, async (req, res) => {
   const paidKey = process.env.OPENAI_API_KEY;
-  const freeKey = process.env.OPENAI_API_KEY_FREE;
+  const freeKey = process.env.OPENAI_API_KEY;
   if (!paidKey && !freeKey) {
     return res.status(503).json({ message: 'Assistant not configured (no API key)' });
   }
@@ -80,14 +80,28 @@ router.post('/text', optionalAuth, async (req, res) => {
     }
     const user: any = (req as any).user || null;
     const isGuest = !user;
+    
+    // Check guest rate limit
     if (isGuest) {
       const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
       const entry = getRateEntry(ip);
       if (entry.count >= GUEST_DAILY_LIMIT) {
-        return res.status(429).json({ message: 'Daily free question limit reached. Create a free account for more.', code: 'GUEST_LIMIT' });
+        return res.status(429).json({ 
+          message: 'You\'ve used all your free questions. Register and verify your email to continue using GMAT Ask.', 
+          code: 'GUEST_LIMIT' 
+        });
       }
       entry.count++;
     }
+    
+    // Check if user is registered but email not verified
+    if (user && !user.emailVerified) {
+      return res.status(403).json({ 
+        message: 'Please verify your email to use GMAT Ask. Check your inbox for the verification link.', 
+        code: 'EMAIL_NOT_VERIFIED' 
+      });
+    }
+    
     // Decide whether to force free key: guests always free; logged-in uses paid unless not subscribed.
     const free = isGuest || !user.subscriptionActive;
     const answer = await voiceRealtimeService.generateTextResponse(question, { model, free });

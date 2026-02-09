@@ -87,7 +87,7 @@ export class VoiceRealtimeService {
     // Primary (paid, voice-capable) key
     const paidKey = process.env.OPENAI_API_KEY || '';
     // Free / limited key (text only fallback)
-    const freeKey = process.env.OPENAI_API_KEY_FREE || '';
+    const freeKey = process.env.OPENAI_API_KEY || '';
     this.apiKey = paidKey || freeKey; // default baseline to something so errors surface clearly later
     this.defaultModel = process.env.VOICE_MODEL || 'gpt-4o-realtime-preview';
     this.defaultVoice = process.env.VOICE_DEFAULT_VOICE || 'alloy';
@@ -145,6 +145,7 @@ export class VoiceRealtimeService {
   /**
    * Generate a text-only response (no audio) using regular chat completions style API.
    * Keeps same strict GMAT system prompt.
+   * Uses cheap models (gpt-4o-mini or gpt-3.5-turbo) for cost efficiency.
    */
   async generateTextResponse(userMessage: string, opts: { model?: string; free?: boolean } = {}): Promise<string> {
     const paidKey = process.env.OPENAI_API_KEY || '';
@@ -152,14 +153,22 @@ export class VoiceRealtimeService {
     const useFree = opts.free && freeKey;
     const keyToUse = useFree ? freeKey : (paidKey || freeKey);
     if (!keyToUse) throw new Error('Text assistant unavailable: no API key configured');
-    const model = opts.model || process.env.TEXT_MODEL || 'gpt-4o-mini';
+    
+    // Use accurate and cheap models for text chat (speed is not critical)
+    // Free/unpaid users: gpt-4o-mini (best balance of accuracy and cost)
+    // Paid users: gpt-4o-mini (same quality, no need for upgrade since text doesn't need realtime)
+    const defaultModel = 'gpt-5-nano';  // Best model for text: accurate, cheap, no speed requirement
+    const model = opts.model || process.env.TEXT_MODEL || defaultModel;
+    
+    console.log(`[voice] Text chat using model: ${model} (free: ${useFree})`);
+    
     const body = {
       model,
       messages: [
         { role: 'system', content: this.systemPrompt },
         { role: 'user', content: userMessage }
       ],
-      max_tokens: 800
+      //max_tokens: 800
     };
     const resp = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',

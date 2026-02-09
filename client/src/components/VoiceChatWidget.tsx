@@ -118,18 +118,31 @@ const VoiceChatWidget: React.FC<VoiceChatWidgetProps> = ({ model, voice, onClose
       try {
         res = await askVoiceText(clean);
       } catch (err: any) {
-        // If guest free limit reached (429) show friendly upgrade message
+        // Handle different error codes
         const status = err?.response?.status;
         const code = err?.response?.data?.code;
+        const message = err?.response?.data?.message;
+        
         if (status === 429 && code === 'GUEST_LIMIT') {
           setChatTranscript(prev => prev.filter(m => m.id !== typingId).concat({
             id: 'limit-' + Date.now().toString(36),
             role: 'assistant',
-            text: 'You reached today\'s free question limit. Create a free account for more and unlock progress tracking.'
+            text: message || 'You\'ve used all your free questions. Register and verify your email to continue using GMAT Ask.'
           }));
           setSending(false);
           return;
         }
+        
+        if (status === 403 && code === 'EMAIL_NOT_VERIFIED') {
+          setChatTranscript(prev => prev.filter(m => m.id !== typingId).concat({
+            id: 'verify-' + Date.now().toString(36),
+            role: 'assistant',
+            text: message || 'Please verify your email to use GMAT Ask. Check your inbox for the verification link.'
+          }));
+          setSending(false);
+          return;
+        }
+        
         throw err;
       }
       setChatTranscript(prev => prev.filter(m => m.id !== typingId).concat({ id: 'a-' + Date.now().toString(36), role: 'assistant', text: res.answer }));

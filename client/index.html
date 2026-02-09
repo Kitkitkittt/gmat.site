@@ -17,7 +17,9 @@
       // If the placeholder was replaced (will not contain % signs) and GA_ID is non-empty, init GA
       if (GA_ID && !GA_ID.startsWith('%')) {
         gtag('js', new Date());
-        gtag('config', GA_ID);
+        gtag('config', GA_ID, {
+          'cookie_domain': 'gmat.site'
+        });
       } else {
         console.warn('Google Analytics measurement ID not set (VITE_GA_MEASUREMENT_ID). Skipping GA init.');
       }
