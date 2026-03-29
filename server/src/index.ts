@@ -2,6 +2,14 @@ import './config/env';
 import express from 'express';
 import mongoose from 'mongoose';
 import path from 'path';
+import dns from 'dns';
+
+// Windows DNS workaround for MongoDB Atlas SRV record issues (EDESTRUCTION errors)
+if (process.platform === 'win32') {
+  dns.setServers(['8.8.8.8', '8.8.4.4']); // Use Google's DNS instead of system DNS
+  console.log('[dns] Windows detected: using Google DNS for MongoDB SRV resolution');
+}
+
 // X.509 support removed; simplified SCRAM/password connection only
 import authRoutes from './routes/auth';
 import testRoutes from './routes/tests';

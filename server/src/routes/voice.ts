@@ -78,8 +78,8 @@ router.post('/text', optionalAuth, async (req, res) => {
     if (!question || typeof question !== 'string') {
       return res.status(400).json({ message: 'Missing question' });
     }
-    const user: any = (req as any).user || null;
-    const isGuest = !user;
+    const authUser: any = (req as any).user || null;
+    const isGuest = !authUser;
     
     // Check guest rate limit
     if (isGuest) {
@@ -94,12 +94,20 @@ router.post('/text', optionalAuth, async (req, res) => {
       entry.count++;
     }
     
-    // Check if user is registered but email not verified
-    if (user && !user.emailVerified) {
-      return res.status(403).json({ 
-        message: 'Please verify your email to use GMAT Ask. Check your inbox for the verification link.', 
-        code: 'EMAIL_NOT_VERIFIED' 
-      });
+    // For authenticated users, fetch fresh user from DB to check current emailVerified status
+    let user: any = null;
+    if (!isGuest) {
+      const userId = authUser.id || authUser._id;
+      user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      if (!user.emailVerified) {
+        return res.status(403).json({ 
+          message: 'Please verify your email to use GMAT Ask. Check your inbox for the verification link.', 
+          code: 'EMAIL_NOT_VERIFIED' 
+        });
+      }
     }
     
     // Decide whether to force free key: guests always free; logged-in uses paid unless not subscribed.
