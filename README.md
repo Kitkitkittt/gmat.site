@@ -31,6 +31,8 @@ server/   # Express + Mongoose backend
 infra/    # Dockerfile, Cloud Build, env templates
 ```
 
+For documentation-only changes, use the [source-only review lane](SWARM_READY.md#verification-starting-point). It needs neither a running application nor cloud configuration.
+
 ## Prerequisites
 
 - Node.js 20.x (LTS) – required (backend engines field enforces >=20)

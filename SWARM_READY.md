@@ -21,7 +21,7 @@ If a `swarm-ready` skill is installed, load it. Otherwise execute the documented
 
 ## Repository starting point
 
-Read: [README.md](README.md), [package.json](package.json), [scripts](scripts), [.github](.github).
+Read the [README](README.md) and [root manifest](package.json). The root Yarn workspaces are [client](client/package.json) and [server](server/package.json); [mobile](mobile/package.json) has a separate manifest and is not part of the root build.
 
 Continue an existing approved issue or a clearly scoped user objective after inspecting the source map below. If none is selected, return the smallest useful improvement and its verifier as the handoff; do not begin a portfolio-wide rewrite.
 
@@ -41,11 +41,16 @@ The base above is an inspection snapshot, not a permanent working branch. Refres
 
 ## Verification starting point
 
-| Declared command | Source and limit |
-| --- | --- |
-| `yarn run build` | package.json scripts; inspect hooks and select a bounded, non-watch invocation |
+**Documentation only:** review the changed links and wording. From the repository root, check that the referenced source paths are tracked and that the local patch has no whitespace errors:
 
-These commands were read from source, not executed for this documentation change. Build, syntax and lint success are not functional acceptance. Confirm the current setup, lockfile, hooks, required services and focused test scope before running.
+```sh
+git --no-lazy-fetch ls-files --error-unmatch -- README.md SWARM_READY.md package.json client/package.json server/package.json mobile/package.json .github/workflows/deploy.yml &&
+  git --no-lazy-fetch diff --check HEAD -- README.md SWARM_READY.md
+```
+
+For a committed patch, compare its review base and candidate SHA with `git diff --check`. These local Git checks do not install dependencies, start the app, seed MongoDB, or require `.env` values.
+
+**Build and deployment are separate:** the root `yarn build` delegates to the two workspaces. The [Cloud Run workflow](.github/workflows/deploy.yml) declares `workflow_dispatch` only; it is a deployment operation, not a documentation check. Leave gcloud, registry pushes, and the secret publication script out of this lane.
 
 ## Required handoff result
 
